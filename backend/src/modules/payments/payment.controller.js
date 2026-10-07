@@ -1,8 +1,11 @@
 import {
-    getPaymentById,
-    handlePaymentWebhook,
-    initializePayment,
+  checkPaymentStatus,
+  getPaymentById,
+  handlePaymentWebhook,
+  initializePayment,
 } from "./payment.service.js";
+
+import { normalizeMtnCallback } from "./momo.webhook.js";
 
 export async function initializePaymentHandler(req, res) {
   const result = await initializePayment(req.body);
@@ -24,15 +27,22 @@ export async function getPaymentHandler(req, res) {
     data: payment,
   });
 }
-
-export async function paymentWebhookHandler(req, res) {
-  const result = await handlePaymentWebhook(req.body);
+export async function checkPaymentStatusHandler(req, res) {
+  const result = await checkPaymentStatus(req.params.id);
 
   return res.status(200).json({
     success: true,
-    message: result.alreadyProcessed
-      ? "Payment webhook already processed"
-      : "Payment webhook processed successfully",
+    data: result,
+  });
+}
+
+export async function paymentWebhookHandler(req, res) {
+  const normalizedPayload = normalizeMtnCallback(req.body);
+
+  const result = await handlePaymentWebhook(normalizedPayload);
+
+  return res.status(200).json({
+    success: true,
     data: result,
   });
 }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import {
+    checkPaymentStatusHandler,
     getPaymentHandler,
     initializePaymentHandler,
     paymentWebhookHandler,
@@ -9,6 +10,8 @@ import {
 const router = Router();
 
 router.post("/initialize", initializePaymentHandler);
+
+router.get("/:id/status", checkPaymentStatusHandler);
 
 router.get("/:id", getPaymentHandler);
 

@@ -172,12 +172,35 @@ export async function initializePayment(data) {
 
   const paymentProvider = getPaymentProvider(provider);
 
-  const providerResult = await paymentProvider.initializePayment({
-    paymentId: payment.id,
-    amount,
-    currency: "GHS",
-    phone: appointment.patient.phone,
-  });
+  let providerResult;
+
+  try {
+    providerResult = await paymentProvider.initializePayment({
+      paymentId: payment.id,
+      amount,
+      currency: "GHS",
+      phone: appointment.patient.phone,
+    });
+  } catch (error) {
+    // The payment was created locally, but the external
+    // provider did not accept the payment request.
+    //
+    // Mark it as failed so a later attempt can create a
+    // fresh payment initialization.
+
+    const { error: paymentUpdateError } = await supabase
+      .from("payments")
+      .update({
+        status: "failed",
+      })
+      .eq("id", payment.id);
+
+    if (paymentUpdateError) {
+      throw paymentUpdateError;
+    }
+
+    throw error;
+  }
 
   // --------------------------------------------------
   // Store provider reference
@@ -293,8 +316,18 @@ export async function handlePaymentWebhook(data) {
   // --------------------------------------------------
   // Find payment
   // --------------------------------------------------
+  //
+  // For real MTN callbacks:
+  //
+  // MTN externalId = our payment.id
+  //
+  // We also keep provider_reference lookup for
+  // backwards compatibility with our manual webhook tests.
+  // --------------------------------------------------
 
-  const { data: payment, error: paymentError } = await supabase
+  let payment = null;
+
+  const { data: paymentById, error: paymentByIdError } = await supabase
     .from("payments")
     .select(
       `
@@ -308,11 +341,43 @@ export async function handlePaymentWebhook(data) {
       provider_reference
     `,
     )
-    .eq("provider_reference", referenceId)
+    .eq("id", referenceId)
     .maybeSingle();
 
-  if (paymentError) {
-    throw paymentError;
+  if (paymentByIdError) {
+    throw paymentByIdError;
+  }
+
+  payment = paymentById;
+
+  // --------------------------------------------------
+  // Fallback: find by provider reference
+  // --------------------------------------------------
+
+  if (!payment) {
+    const { data: paymentByReference, error: paymentReferenceError } =
+      await supabase
+        .from("payments")
+        .select(
+          `
+        id,
+        appointment_id,
+        amount,
+        currency,
+        method,
+        provider,
+        status,
+        provider_reference
+      `,
+        )
+        .eq("provider_reference", referenceId)
+        .maybeSingle();
+
+    if (paymentReferenceError) {
+      throw paymentReferenceError;
+    }
+
+    payment = paymentByReference;
   }
 
   if (!payment) {
@@ -347,6 +412,7 @@ export async function handlePaymentWebhook(data) {
   if (payment.status === "successful") {
     return {
       payment,
+      appointment: null,
       alreadyProcessed: true,
     };
   }
@@ -359,9 +425,23 @@ export async function handlePaymentWebhook(data) {
     status: paymentStatus,
   };
 
-  if (transactionId) {
-    updateData.provider_reference = transactionId;
+  if (paymentStatus === "successful") {
+    updateData.paid_at = new Date().toISOString();
   }
+
+  /*
+   * IMPORTANT:
+   *
+   * Do NOT replace provider_reference with MTN's
+   * financialTransactionId.
+   *
+   * provider_reference contains the MTN X-Reference-Id
+   * generated during RequestToPay.
+   *
+   * transactionId is still available to the caller if
+   * needed, but our current payments schema has no
+   * dedicated transaction_id column.
+   */
 
   const { data: updatedPayment, error: updatePaymentError } = await supabase
     .from("payments")
@@ -418,8 +498,6 @@ export async function handlePaymentWebhook(data) {
 
     if (!appointment) {
       // Payment succeeded but appointment was no longer pending.
-      // Return the successful payment without creating another
-      // appointment state transition.
       return {
         payment: updatedPayment,
         appointment: null,
@@ -430,6 +508,7 @@ export async function handlePaymentWebhook(data) {
     return {
       payment: updatedPayment,
       appointment,
+      transactionId: transactionId || null,
       alreadyProcessed: false,
     };
   }
@@ -437,6 +516,68 @@ export async function handlePaymentWebhook(data) {
   return {
     payment: updatedPayment,
     appointment: null,
+    transactionId: transactionId || null,
     alreadyProcessed: false,
+  };
+}
+
+export async function checkPaymentStatus(paymentId) {
+  if (!isValidUuid(paymentId)) {
+    throw new AppError("Valid payment ID is required", 400);
+  }
+
+  const { data: payment, error } = await supabase
+    .from("payments")
+    .select(
+      `
+      id,
+      appointment_id,
+      amount,
+      currency,
+      method,
+      provider,
+      status,
+      provider_reference,
+      created_at,
+      paid_at
+      `,
+    )
+    .eq("id", paymentId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!payment) {
+    throw new AppError("Payment not found", 404);
+  }
+
+  if (payment.provider !== "momo") {
+    throw new AppError("Invalid payment provider", 400);
+  }
+
+  if (!payment.provider_reference) {
+    throw new AppError("Payment does not have a provider reference", 409);
+  }
+
+  const paymentProvider = getPaymentProvider(payment.provider);
+
+  const providerResult = await paymentProvider.getPaymentStatus(
+    payment.provider_reference,
+  );
+
+  const normalizedStatus = String(providerResult.status || "").toLowerCase();
+
+  const result = await handlePaymentWebhook({
+    referenceId: payment.id,
+    status: normalizedStatus,
+    amount: providerResult.amount,
+    transactionId: providerResult.financialTransactionId || null,
+  });
+
+  return {
+    ...result,
+    provider: providerResult,
   };
 }
