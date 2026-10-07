@@ -1,8 +1,9 @@
 import {
-    cancelAppointment,
-    createAppointment,
-    getAppointmentById,
-    getAppointmentStatus,
+  cancelAppointment,
+  createAppointment,
+  getAppointmentById,
+  getAppointmentStatus,
+  getAppointments,
 } from "./appointment.service.js";
 
 export async function createAppointmentHandler(req, res) {
@@ -40,5 +41,18 @@ export async function cancelAppointmentHandler(req, res) {
     success: true,
     message: "Appointment cancelled successfully",
     data: appointment,
+  });
+}
+
+export async function getAppointmentsHandler(req, res) {
+  const appointments = await getAppointments({
+    status: req.query.status,
+    clinicianId: req.query.clinicianId,
+    date: req.query.date,
+  });
+
+  return res.status(200).json({
+    success: true,
+    data: appointments,
   });
 }

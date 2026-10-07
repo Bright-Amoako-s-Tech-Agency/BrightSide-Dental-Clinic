@@ -342,6 +342,100 @@ export async function createAppointment(data) {
   };
 }
 
+export async function getAppointments(filters = {}) {
+  const { status, clinicianId, date } = filters;
+
+  if (status) {
+    const allowedStatuses = [
+      "pending",
+      "confirmed",
+      "cancelled",
+      "completed",
+      "no_show",
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      throw new AppError("Invalid appointment status", 400);
+    }
+  }
+
+  if (clinicianId && !isValidUuid(clinicianId)) {
+    throw new AppError("Valid clinicianId is required", 400);
+  }
+
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new AppError("Invalid date. Use YYYY-MM-DD", 400);
+  }
+
+  let query = supabase
+    .from("appointments")
+    .select(
+      `
+      id,
+      starts_at,
+      ends_at,
+      status,
+      comfort_mode,
+      total_amount,
+      deposit_amount,
+      balance_amount,
+      pending_until,
+      patient_notes,
+      created_at,
+      updated_at,
+      patient:patients (
+        id,
+        first_name,
+        last_name,
+        phone,
+        email
+      ),
+      clinician:clinicians (
+        id,
+        name,
+        title,
+        specialty
+      ),
+      treatment:treatments (
+        id,
+        name,
+        duration_minutes,
+        price_type,
+        price_min,
+        price_max
+      )
+    `,
+    )
+    .order("starts_at", { ascending: true });
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  if (clinicianId) {
+    query = query.eq("clinician_id", clinicianId);
+  }
+
+  if (date) {
+    const startOfDay = new Date(`${date}T00:00:00.000Z`);
+    const startOfNextDay = new Date(startOfDay);
+
+    startOfNextDay.setUTCDate(startOfNextDay.getUTCDate() + 1);
+
+    query = query
+      .gte("starts_at", startOfDay.toISOString())
+      .lt("starts_at", startOfNextDay.toISOString());
+  }
+
+  const { data: appointments, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return appointments;
+}
+
 export async function getAppointmentById(appointmentId) {
   if (!isValidUuid(appointmentId)) {
     throw new AppError("Valid appointment ID is required", 400);

@@ -5,9 +5,12 @@ import {
     createAppointmentHandler,
     getAppointmentHandler,
     getAppointmentStatusHandler,
+    getAppointmentsHandler,
 } from "./appointment.controller.js";
 
 const router = Router();
+
+router.get("/", getAppointmentsHandler);
 
 router.post("/", createAppointmentHandler);
 
