@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import StaffLayout from "../components/layout/StaffLayout";
 import AppointmentDetails from "../pages/AppointmentDetails";
 import Appointments from "../pages/Appointments";
+import ClinicianDetails from "../pages/ClinicianDetails";
 import Clinicians from "../pages/Clinicians";
 import Dashboard from "../pages/Dashboard";
 import PatientDetails from "../pages/PatientDetails";
@@ -32,6 +33,10 @@ export const router = createBrowserRouter([
       {
         path: "clinicians",
         element: <Clinicians />,
+      },
+      {
+        path: "clinicians/:id",
+        element: <ClinicianDetails />,
       },
     ],
   },

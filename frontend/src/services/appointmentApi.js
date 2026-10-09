@@ -42,3 +42,11 @@ export async function getPatientAppointments(patientId) {
   const result = await apiRequest(`/appointments?${params.toString()}`);
   return result.data;
 }
+
+export async function getClinicianAppointments(clinicianId) {
+  const params = new URLSearchParams();
+  params.set("clinicianId", clinicianId);
+
+  const result = await apiRequest(`/appointments?${params.toString()}`);
+  return result.data;
+}
