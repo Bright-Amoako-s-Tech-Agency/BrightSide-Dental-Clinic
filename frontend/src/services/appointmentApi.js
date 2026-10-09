@@ -21,3 +21,16 @@ export async function getAppointments(filters = {}) {
 
   return result.data;
 }
+
+export async function getAppointmentById(id) {
+  const result = await apiRequest(`/appointments/${id}`);
+  return result.data;
+}
+
+export async function cancelAppointment(id) {
+  const result = await apiRequest(`/appointments/${id}/cancel`, {
+    method: "POST",
+  });
+
+  return result.data;
+}

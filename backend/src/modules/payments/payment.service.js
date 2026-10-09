@@ -11,9 +11,7 @@ function isValidUuid(value) {
     );
 }
 
-// --------------------------------------------------
 // Initialize payment
-// --------------------------------------------------
 
 export async function initializePayment(data) {
     const { appointmentId, method = "momo", provider = "momo" } = data;
@@ -26,9 +24,11 @@ export async function initializePayment(data) {
         throw new AppError("Only MoMo is currently supported", 400);
     }
 
-    // --------------------------------------------------
+    if (method !== "momo") {
+        throw new AppError("Only MoMo payment method is currently supported", 400);
+    }
+
     // Find appointment
-    // --------------------------------------------------
 
     const { data: appointment, error: appointmentError } = await supabase
         .from("appointments")
@@ -60,9 +60,7 @@ export async function initializePayment(data) {
         throw new AppError("Appointment not found", 404);
     }
 
-    // --------------------------------------------------
     // Appointment must still be pending
-    // --------------------------------------------------
 
     if (appointment.status !== "pending") {
         throw new AppError(
@@ -71,20 +69,29 @@ export async function initializePayment(data) {
         );
     }
 
-    // --------------------------------------------------
     // Check pending hold
-    // --------------------------------------------------
 
     if (
         appointment.pending_until &&
         new Date(appointment.pending_until) <= new Date()
     ) {
+        const { error: expireError } = await supabase
+            .from("appointments")
+            .update({
+                status: "cancelled",
+                pending_until: null,
+            })
+            .eq("id", appointmentId)
+            .eq("status", "pending");
+
+        if (expireError) {
+            throw expireError;
+        }
+
         throw new AppError("The appointment payment hold has expired", 409);
     }
 
-    // --------------------------------------------------
     // Get deposit amount from appointment
-    // --------------------------------------------------
 
     const amount = Number(appointment.deposit_amount);
 
@@ -92,9 +99,7 @@ export async function initializePayment(data) {
         throw new AppError("Appointment does not have a valid deposit amount", 400);
     }
 
-    // --------------------------------------------------
     // Check for an existing pending/successful payment
-    // --------------------------------------------------
 
     const { data: existingPayments, error: existingError } = await supabase
         .from("payments")
@@ -128,9 +133,7 @@ export async function initializePayment(data) {
         };
     }
 
-    // --------------------------------------------------
     // Create payment record
-    // --------------------------------------------------
 
     const { data: payment, error: paymentError } = await supabase
         .from("payments")
@@ -198,7 +201,7 @@ export async function initializePayment(data) {
         throw error;
     }
 
-    if (!providerResult && !providerResult.providerReference) {
+    if (!providerResult || !providerResult.providerReference) {
         const { error: paymentUpdateError } = await supabase
             .from("payments")
             .update({ status: "failed" })
@@ -491,6 +494,7 @@ export async function handlePaymentWebhook(data) {
             })
             .eq("id", payment.appointment_id)
             .eq("status", "pending")
+            .gt("pending_until", new Date().toISOString())
             .select(
                 `
           id,

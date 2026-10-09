@@ -51,20 +51,27 @@ export default function Dashboard() {
   }, []);
 
   const metrics = useMemo(() => {
-    const confirmed = appointments.filter(
+    // Only confirmed appointments count toward projected revenue
+    // and booked deposits. Pending appointments are not yet confirmed.
+    const activeAppointments = appointments.filter(
+      (appointment) =>
+        appointment.status === "confirmed" || appointment.status === "pending",
+    );
+
+    const confirmed = activeAppointments.filter(
       (appointment) => appointment.status === "confirmed",
     );
 
-    const pending = appointments.filter(
+    const pending = activeAppointments.filter(
       (appointment) => appointment.status === "pending",
     );
 
-    const projectedTotal = appointments.reduce(
+    const projectedTotal = activeAppointments.reduce(
       (sum, appointment) => sum + Number(appointment.total_amount || 0),
       0,
     );
 
-    const deposits = appointments.reduce(
+    const deposits = activeAppointments.reduce(
       (sum, appointment) => sum + Number(appointment.deposit_amount || 0),
       0,
     );
@@ -72,6 +79,7 @@ export default function Dashboard() {
     return {
       confirmed: confirmed.length,
       pending: pending.length,
+      activeCount: activeAppointments.length,
       projectedTotal,
       deposits,
     };
@@ -143,11 +151,11 @@ export default function Dashboard() {
         <KpiCard
           number="02"
           label="Day Caseload"
-          value={`${appointments.length} Total`}
+          value={`${metrics.activeCount} Total`}
           description={`${metrics.confirmed} confirmed • ${metrics.pending} pending`}
           progress={
-            appointments.length
-              ? (metrics.confirmed / appointments.length) * 100
+            metrics.activeCount
+              ? (metrics.confirmed / metrics.activeCount) * 100
               : 0
           }
         />
