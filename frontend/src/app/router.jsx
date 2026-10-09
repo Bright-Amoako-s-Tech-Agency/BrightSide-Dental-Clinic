@@ -5,6 +5,7 @@ import AppointmentDetails from "../pages/AppointmentDetails";
 import Appointments from "../pages/Appointments";
 import Clinicians from "../pages/Clinicians";
 import Dashboard from "../pages/Dashboard";
+import PatientDetails from "../pages/PatientDetails";
 import Patients from "../pages/Patients";
 export const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ export const router = createBrowserRouter([
       {
         path: "patients",
         element: <Patients />,
+      },
+      {
+        path: "patients/:id",
+        element: <PatientDetails />,
       },
       {
         path: "clinicians",

@@ -34,3 +34,11 @@ export async function cancelAppointment(id) {
 
   return result.data;
 }
+
+export async function getPatientAppointments(patientId) {
+  const params = new URLSearchParams();
+  params.set("patientId", patientId);
+
+  const result = await apiRequest(`/appointments?${params.toString()}`);
+  return result.data;
+}
