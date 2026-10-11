@@ -1,16 +1,28 @@
-import { findAvailability } from "./availability.service.js";
+import {
+  findAvailability,
+  findClinicianSchedule,
+} from "./availability.service.js";
 
 export async function getAvailability(req, res) {
-    const { clinicianId, treatmentId, date } = req.query;
+  const { clinicianId, treatmentId, date } = req.query;
 
-    const availability = await findAvailability({
-        clinicianId,
-        treatmentId,
-        date,
-    });
+  const availability = await findAvailability({
+    clinicianId,
+    treatmentId,
+    date,
+  });
 
-    res.json({
-        success: true,
-        data: availability,
-    });
+  res.json({
+    success: true,
+    data: availability,
+  });
+}
+
+export async function getClinicianSchedule(req, res) {
+  const schedule = await findClinicianSchedule(req.params.clinicianId);
+
+  res.json({
+    success: true,
+    data: schedule,
+  });
 }

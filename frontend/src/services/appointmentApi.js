@@ -50,3 +50,17 @@ export async function getClinicianAppointments(clinicianId) {
   const result = await apiRequest(`/appointments?${params.toString()}`);
   return result.data;
 }
+
+export async function completeAppointment(id) {
+  const result = await apiRequest(`/appointments/${id}/complete`, {
+    method: "POST",
+  });
+  return result.data;
+}
+
+export async function markAppointmentNoShow(id) {
+  const result = await apiRequest(`/appointments/${id}/no-show`, {
+    method: "POST",
+  });
+  return result.data;
+}

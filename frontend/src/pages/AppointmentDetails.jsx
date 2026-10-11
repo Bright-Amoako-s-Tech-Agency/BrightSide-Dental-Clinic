@@ -9,7 +9,9 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   cancelAppointment,
+  completeAppointment,
   getAppointmentById,
+  markAppointmentNoShow,
 } from "../services/appointmentApi";
 
 function formatDateTime(value) {
@@ -64,6 +66,8 @@ export default function AppointmentDetails() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
+  const [updatingOutcome, setUpdatingOutcome] = useState(false);
+  const [outcomeError, setOutcomeError] = useState("");
 
   async function handleCancelAppointment() {
     setCancelling(true);
@@ -77,6 +81,24 @@ export default function AppointmentDetails() {
       setCancelError(err.message || "Failed to cancel appointment.");
     } finally {
       setCancelling(false);
+    }
+  }
+  async function handleAppointmentOutcome(outcome) {
+    setUpdatingOutcome(true);
+    setOutcomeError("");
+
+    try {
+      if (outcome === "completed") {
+        await completeAppointment(id);
+      } else {
+        await markAppointmentNoShow(id);
+      }
+
+      await loadAppointment(true);
+    } catch (err) {
+      setOutcomeError(err.message || "Failed to update appointment status.");
+    } finally {
+      setUpdatingOutcome(false);
     }
   }
 
@@ -193,6 +215,14 @@ export default function AppointmentDetails() {
           {error}
         </div>
       )}
+      {outcomeError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+        >
+          {outcomeError}
+        </div>
+      )}
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
         <section className="rounded-xl border border-slate-200 bg-white p-5">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
@@ -304,6 +334,28 @@ export default function AppointmentDetails() {
         >
           Back to list
         </button>
+
+        {appointment.status === "confirmed" && (
+          <>
+            <button
+              type="button"
+              disabled={updatingOutcome}
+              onClick={() => handleAppointmentOutcome("completed")}
+              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {updatingOutcome ? "Updating..." : "Mark completed"}
+            </button>
+
+            <button
+              type="button"
+              disabled={updatingOutcome}
+              onClick={() => handleAppointmentOutcome("no_show")}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {updatingOutcome ? "Updating..." : "Mark no-show"}
+            </button>
+          </>
+        )}
 
         {canCancel && (
           <button

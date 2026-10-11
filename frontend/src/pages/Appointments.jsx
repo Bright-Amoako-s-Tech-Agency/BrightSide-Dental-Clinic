@@ -2,6 +2,7 @@ import { CalendarDays, Eye, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getAppointments } from "../services/appointmentApi";
+import { getClinicians } from "../services/clinicianApi";
 
 function formatDateTime(value) {
   if (!value) return "—";
@@ -49,6 +50,21 @@ export default function Appointments() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [clinicians, setClinicians] = useState([]);
+  const [clinicianId, setClinicianId] = useState("");
+
+  useEffect(() => {
+    async function loadClinicians() {
+      try {
+        const data = await getClinicians();
+        setClinicians(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to load clinicians:", err);
+      }
+    }
+
+    loadClinicians();
+  }, []);
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -58,15 +74,15 @@ export default function Appointments() {
       const data = await getAppointments({
         status: status || undefined,
         date: date || undefined,
+        clinicianId: clinicianId || undefined,
       });
-
       setAppointments(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || "Failed to load appointments.");
     } finally {
       setLoading(false);
     }
-  }, [status, date]);
+  }, [status, date, clinicianId]);
 
   useEffect(() => {
     loadAppointments();
@@ -120,7 +136,7 @@ export default function Appointments() {
       </section>
 
       <section className="rounded-2xl bg-white p-5 shadow-[0_2px_12px_rgba(16,35,31,0.03)] sm:p-6">
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px_190px]">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_190px_190px_220px]">
           <label className="flex items-center gap-3 rounded-xl border border-[#e5e1d8] px-3 py-2.5">
             <Search size={17} className="shrink-0 text-[#69706c]" />
             <input
@@ -156,6 +172,20 @@ export default function Appointments() {
             <option value="completed">Completed</option>
             <option value="no_show">No-show</option>
           </select>
+
+          <select
+            value={clinicianId}
+            onChange={(event) => setClinicianId(event.target.value)}
+            aria-label="Filter by clinician"
+            className="rounded-xl border border-[#e5e1d8] bg-white px-3 py-2.5 text-sm text-[#263b35] outline-none focus:border-[#31584d]"
+          >
+            <option value="">All clinicians</option>
+            {clinicians.map((clinician) => (
+              <option key={clinician.id} value={clinician.id}>
+                {clinician.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="mt-5 flex items-center justify-between border-b border-[#eeeae2] pb-4">
@@ -164,13 +194,14 @@ export default function Appointments() {
             {filteredAppointments.length === 1 ? "" : "s"}
           </p>
 
-          {(date || status || search) && (
+          {(date || status || search || clinicianId) && (
             <button
               type="button"
               onClick={() => {
                 setDate("");
                 setStatus("");
                 setSearch("");
+                setClinicianId("");
               }}
               className="text-xs font-semibold text-[#a94320] hover:text-[#843316]"
             >

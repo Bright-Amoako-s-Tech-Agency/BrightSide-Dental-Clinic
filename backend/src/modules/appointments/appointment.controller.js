@@ -1,9 +1,11 @@
 import {
   cancelAppointment,
+  completeAppointment,
   createAppointment,
   getAppointmentById,
   getAppointmentStatus,
   getAppointments,
+  markAppointmentNoShow,
 } from "./appointment.service.js";
 
 export async function createAppointmentHandler(req, res) {
@@ -55,5 +57,25 @@ export async function getAppointmentsHandler(req, res) {
   return res.status(200).json({
     success: true,
     data: appointments,
+  });
+}
+
+export async function completeAppointmentHandler(req, res) {
+  const appointment = await completeAppointment(req.params.id);
+
+  return res.status(200).json({
+    success: true,
+    message: "Appointment marked as completed",
+    data: appointment,
+  });
+}
+
+export async function markAppointmentNoShowHandler(req, res) {
+  const appointment = await markAppointmentNoShow(req.params.id);
+
+  return res.status(200).json({
+    success: true,
+    message: "Appointment marked as no-show",
+    data: appointment,
   });
 }

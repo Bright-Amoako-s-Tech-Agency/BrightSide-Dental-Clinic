@@ -657,3 +657,63 @@ export async function cancelAppointment(appointmentId) {
 
   return cancelledAppointment;
 }
+
+async function updateAppointmentOutcome(appointmentId, outcome) {
+  if (!isValidUuid(appointmentId)) {
+    throw new AppError("Valid appointment ID is required", 400);
+  }
+
+  if (!["completed", "no_show"].includes(outcome)) {
+    throw new AppError("Invalid appointment outcome", 400);
+  }
+
+  const { data: appointment, error: findError } = await supabase
+    .from("appointments")
+    .select("id, status")
+    .eq("id", appointmentId)
+    .maybeSingle();
+
+  if (findError) {
+    throw findError;
+  }
+
+  if (!appointment) {
+    throw new AppError("Appointment not found", 404);
+  }
+
+  if (appointment.status !== "confirmed") {
+    throw new AppError(
+      `Only confirmed appointments can be marked as ${outcome}`,
+      400,
+    );
+  }
+
+  const { data: updatedAppointment, error: updateError } = await supabase
+    .from("appointments")
+    .update({ status: outcome })
+    .eq("id", appointmentId)
+    .eq("status", "confirmed")
+    .select()
+    .maybeSingle();
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  if (!updatedAppointment) {
+    throw new AppError(
+      "Appointment status changed. Refresh and try again.",
+      409,
+    );
+  }
+
+  return updatedAppointment;
+}
+
+export async function completeAppointment(appointmentId) {
+  return updateAppointmentOutcome(appointmentId, "completed");
+}
+
+export async function markAppointmentNoShow(appointmentId) {
+  return updateAppointmentOutcome(appointmentId, "no_show");
+}

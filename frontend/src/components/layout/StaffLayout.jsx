@@ -18,6 +18,7 @@ const navigation = [
     label: "Clinicians",
     to: "/clinicians",
   },
+  { label: "Treatments", to: "/treatments" },
 ];
 
 function navLinkClass({ isActive }) {
