@@ -1,5 +1,13 @@
 import { apiRequest } from "./api";
 
+export async function createAppointment(payload) {
+  const result = await apiRequest("/appointments", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  return result.data;
+}
 export async function getAppointments(filters = {}) {
   const params = new URLSearchParams();
 

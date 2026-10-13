@@ -7,3 +7,15 @@ export async function getClinicianSchedule(clinicianId) {
 
   return result.data;
 }
+
+export async function getAvailability({ clinicianId, treatmentId, date }) {
+  const params = new URLSearchParams({
+    clinicianId,
+    treatmentId,
+    date,
+  });
+
+  const result = await apiRequest(`/availability?${params.toString()}`);
+
+  return result.data;
+}

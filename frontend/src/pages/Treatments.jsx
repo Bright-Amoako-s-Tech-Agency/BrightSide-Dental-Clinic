@@ -1,6 +1,13 @@
 import { Clock3, Layers3, RefreshCw, Search, Wallet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { getTreatments } from "../services/treatmentApi";
+import TreatmentForm from "../components/treatments/TreatmentForm";
+import {
+  createTreatment,
+  getTreatments,
+  updateTreatment,
+} from "../services/treatmentApi";
+
+import { Pencil, Plus } from "lucide-react";
 
 function formatMoney(amount) {
   if (amount == null) return "Not set";
@@ -32,18 +39,43 @@ export default function Treatments() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const [selectedTreatment, setSelectedTreatment] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   async function loadTreatments() {
     setLoading(true);
     setError("");
 
     try {
-      const data = await getTreatments();
+      const data = await getTreatments({ includeInactive: true });
       setTreatments(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || "Failed to load treatments.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSaveTreatment(payload) {
+    setSaving(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      if (selectedTreatment) {
+        await updateTreatment(selectedTreatment.id, payload);
+        setSuccessMessage("Treatment updated successfully.");
+      } else {
+        await createTreatment(payload);
+        setSuccessMessage("Treatment created successfully.");
+      }
+
+      setFormOpen(false);
+      setSelectedTreatment(null);
+      await loadTreatments();
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -100,15 +132,30 @@ export default function Treatments() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={loadTreatments}
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-[#dedad1] bg-white px-4 py-2.5 text-sm font-semibold text-[#10231f] transition-colors hover:bg-[#eeece5] disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
-        >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={loadTreatments}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dedad1] bg-white px-4 py-2.5 text-sm font-semibold text-[#10231f] transition-colors hover:bg-[#eeece5] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedTreatment(null);
+              setFormOpen(true);
+              setError("");
+              setSuccessMessage("");
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0d2d26] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#19443a]"
+          >
+            <Plus size={16} />
+            New Treatment
+          </button>
+        </div>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-3">
@@ -190,6 +237,12 @@ export default function Treatments() {
           </div>
         )}
 
+        {successMessage && (
+          <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+            {successMessage}
+          </div>
+        )}
+
         {loading ? (
           <p className="py-12 text-center text-sm text-[#69706c]">
             Loading treatments...
@@ -253,11 +306,46 @@ export default function Treatments() {
                     </p>
                   )}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTreatment(treatment);
+                    setFormOpen(true);
+                    setError("");
+                    setSuccessMessage("");
+                  }}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#dedad1] px-3 py-2 text-sm font-semibold text-[#10231f] hover:bg-[#eeece5]"
+                >
+                  <Pencil size={14} />
+                  Edit
+                </button>
               </article>
             ))}
           </div>
         )}
       </section>
+
+      {formOpen && (
+        <TreatmentForm
+          key={selectedTreatment?.id || "new-treatment"}
+          treatment={selectedTreatment}
+          categories={categories}
+          saving={saving}
+          onClose={() => {
+            if (!saving) {
+              setFormOpen(false);
+              setSelectedTreatment(null);
+            }
+          }}
+          onSubmit={handleSaveTreatment}
+        />
+      )}
+
+      {successMessage && (
+        <div className="fixed bottom-4 right-4 z-50 w-full max-w-sm rounded-lg bg-green-50 p-4 text-sm text-green-800 shadow-md">
+          {successMessage}
+        </div>
+      )}
     </div>
   );
 }

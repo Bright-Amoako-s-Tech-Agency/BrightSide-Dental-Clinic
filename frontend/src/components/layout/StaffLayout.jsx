@@ -1,6 +1,7 @@
 import { ChevronDown, Search, UserRoundPlus } from "lucide-react";
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-
+import WalkInBookingModal from "../booking/WalkInBookingModal";
 const navigation = [
   {
     label: "Dashboard",
@@ -31,6 +32,7 @@ function navLinkClass({ isActive }) {
 }
 
 export default function StaffLayout() {
+  const [walkInOpen, setWalkInOpen] = useState(false);
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-[#10231f]">
       <header className="border-b border-[#e5e1d8] bg-[#f7f4ed]">
@@ -80,6 +82,7 @@ export default function StaffLayout() {
           <div className="ml-auto flex items-center gap-3">
             <button
               type="button"
+              onClick={() => setWalkInOpen(true)}
               className="hidden items-center gap-2 rounded-xl bg-[#b84620] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#9f3c1b] md:flex"
             >
               <UserRoundPlus size={16} />
@@ -109,6 +112,13 @@ export default function StaffLayout() {
       <main className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">
         <Outlet />
       </main>
+      <WalkInBookingModal
+        isOpen={walkInOpen}
+        onClose={() => setWalkInOpen(false)}
+        onAppointmentCreated={() => {
+          // Optional: refresh dashboard appointment data here.
+        }}
+      />
     </div>
   );
 }

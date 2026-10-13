@@ -11,38 +11,41 @@ const clinicianSelect = `
   experience_years,
   consultation_fee,
   image_url,
-  active
+  active,
+  clinician_treatments (
+    treatment_id
+  )
 `;
 
 export async function findClinicians() {
-    const { data, error } = await supabase
-        .from("clinicians")
-        .select(clinicianSelect)
-        .eq("active", true)
-        .order("name", { ascending: true });
+  const { data, error } = await supabase
+    .from("clinicians")
+    .select(clinicianSelect)
+    .eq("active", true)
+    .order("name", { ascending: true });
 
-    if (error) {
-        throw new AppError("Failed to fetch clinicians", 500);
-    }
+  if (error) {
+    throw new AppError("Failed to fetch clinicians", 500);
+  }
 
-    return data;
+  return data;
 }
 
 export async function findClinicianById(id) {
-    const { data, error } = await supabase
-        .from("clinicians")
-        .select(clinicianSelect)
-        .eq("id", id)
-        .eq("active", true)
-        .maybeSingle();
+  const { data, error } = await supabase
+    .from("clinicians")
+    .select(clinicianSelect)
+    .eq("id", id)
+    .eq("active", true)
+    .maybeSingle();
 
-    if (error) {
-        throw new AppError("Failed to fetch clinician", 500);
-    }
+  if (error) {
+    throw new AppError("Failed to fetch clinician", 500);
+  }
 
-    if (!data) {
-        throw new AppError("Clinician not found", 404);
-    }
+  if (!data) {
+    throw new AppError("Clinician not found", 404);
+  }
 
-    return data;
+  return data;
 }

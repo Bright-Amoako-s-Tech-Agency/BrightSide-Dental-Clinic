@@ -1,6 +1,6 @@
 import { CalendarPlus, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-
+import WalkInBookingModal from "../components/booking/WalkInBookingModal";
 import AppointmentFlow from "../components/dashboard/AppointmentFlow";
 import KpiCard from "../components/dashboard/KpiCard";
 import { getAppointments } from "../services/appointmentApi";
@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [walkInOpen, setWalkInOpen] = useState(false);
 
   async function loadAppointments() {
     try {
@@ -108,10 +109,11 @@ export default function Dashboard() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              onClick={() => setWalkInOpen(true)}
               className="inline-flex items-center gap-2 rounded-xl bg-[#0d2d26] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#173e34]"
             >
               <CalendarPlus size={16} />
-              Book Walk-in / Call
+              Book Walk-in
             </button>
 
             <button
@@ -185,6 +187,13 @@ export default function Dashboard() {
       ) : (
         <AppointmentFlow appointments={appointments} />
       )}
+      <WalkInBookingModal
+        isOpen={walkInOpen}
+        onClose={() => setWalkInOpen(false)}
+        onAppointmentCreated={() => {
+          // Optional: refresh dashboard appointment data here.
+        }}
+      />
     </div>
   );
 }
