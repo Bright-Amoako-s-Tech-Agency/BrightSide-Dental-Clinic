@@ -1,9 +1,4 @@
-import {
-    ArrowRight,
-    CalendarCheck,
-    Check,
-    X
-} from "lucide-react";
+import { ArrowRight, CalendarCheck, Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -31,6 +26,9 @@ export default function WalkInBookingModal({
   isOpen,
   onClose,
   onAppointmentCreated,
+  initialDate = null,
+  initialTime = null,
+  initialClinician = null,
 }) {
   const [step, setStep] = useState(0);
   const [booking, setBooking] = useState(initialBooking);
@@ -333,6 +331,7 @@ export default function WalkInBookingModal({
                   selectedTreatment={booking.treatment}
                   selectedClinician={booking.clinician}
                   onSelectionChange={handleServiceChange}
+                  initialClinicianId={initialClinician?.id || null}
                 />
               )}
 
@@ -342,6 +341,8 @@ export default function WalkInBookingModal({
                   selectedClinician={booking.clinician}
                   selectedSlot={booking.slot}
                   onSlotSelect={handleSlotSelect}
+                  initialDate={initialDate}
+                  initialTime={initialTime}
                 />
               )}
 

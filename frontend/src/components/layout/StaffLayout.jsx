@@ -20,6 +20,10 @@ const navigation = [
     to: "/clinicians",
   },
   { label: "Treatments", to: "/treatments" },
+  {
+    label: "Schedule",
+    to: "/schedule",
+  },
 ];
 
 function navLinkClass({ isActive }) {
@@ -33,6 +37,38 @@ function navLinkClass({ isActive }) {
 
 export default function StaffLayout() {
   const [walkInOpen, setWalkInOpen] = useState(false);
+  const [bookingDefaults, setBookingDefaults] = useState({
+    initialDate: null,
+    initialTime: null,
+    initialClinician: null,
+  });
+
+  function openWalkInBooking() {
+    setBookingDefaults({
+      initialDate: null,
+      initialTime: null,
+      initialClinician: null,
+    });
+    setWalkInOpen(true);
+  }
+
+  function openCalendarBooking({ date, time, clinician = null }) {
+    setBookingDefaults({
+      initialDate: date,
+      initialTime: time,
+      initialClinician: clinician,
+    });
+    setWalkInOpen(true);
+  }
+
+  function closeWalkInBooking() {
+    setWalkInOpen(false);
+    setBookingDefaults({
+      initialDate: null,
+      initialTime: null,
+      initialClinician: null,
+    });
+  }
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-[#10231f]">
       <header className="border-b border-[#e5e1d8] bg-[#f7f4ed]">
@@ -82,7 +118,7 @@ export default function StaffLayout() {
           <div className="ml-auto flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setWalkInOpen(true)}
+              onClick={openWalkInBooking}
               className="hidden items-center gap-2 rounded-xl bg-[#b84620] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#9f3c1b] md:flex"
             >
               <UserRoundPlus size={16} />
@@ -110,13 +146,20 @@ export default function StaffLayout() {
       </header>
 
       <main className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">
-        <Outlet />
+        <Outlet
+          context={{
+            openCalendarBooking,
+          }}
+        />
       </main>
       <WalkInBookingModal
         isOpen={walkInOpen}
-        onClose={() => setWalkInOpen(false)}
+        onClose={closeWalkInBooking}
+        initialDate={bookingDefaults.initialDate}
+        initialTime={bookingDefaults.initialTime}
+        initialClinician={bookingDefaults.initialClinician}
         onAppointmentCreated={() => {
-          // Optional: refresh dashboard appointment data here.
+          // Calendar refresh will be connected in the next step.
         }}
       />
     </div>

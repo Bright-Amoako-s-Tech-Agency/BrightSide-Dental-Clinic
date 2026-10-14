@@ -7,6 +7,7 @@ export default function ServiceAndDoctor({
   selectedTreatment,
   selectedClinician,
   onSelectionChange,
+  initialClinicianId = null,
 }) {
   const [treatments, setTreatments] = useState([]);
   const [clinicians, setClinicians] = useState([]);
@@ -47,6 +48,36 @@ export default function ServiceAndDoctor({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!initialClinicianId || loading || clinicians.length === 0) {
+      return;
+    }
+
+    const clinician = clinicians.find((item) => item.id === initialClinicianId);
+
+    if (!clinician) return;
+
+    const providesSelectedTreatment =
+      !selectedTreatment ||
+      (clinician.clinician_treatments || []).some(
+        (item) => item.treatment_id === selectedTreatment.id,
+      );
+
+    if (providesSelectedTreatment && selectedClinician?.id !== clinician.id) {
+      onSelectionChange({
+        treatment: selectedTreatment,
+        clinician,
+      });
+    }
+  }, [
+    initialClinicianId,
+    loading,
+    clinicians,
+    selectedTreatment,
+    selectedClinician?.id,
+    onSelectionChange,
+  ]);
 
   const availableClinicians = useMemo(() => {
     if (!selectedTreatment) return [];

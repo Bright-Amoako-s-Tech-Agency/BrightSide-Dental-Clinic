@@ -9,6 +9,7 @@ import Clinicians from "../pages/Clinicians";
 import Dashboard from "../pages/Dashboard";
 import PatientDetails from "../pages/PatientDetails";
 import Patients from "../pages/Patients";
+import ScheduleCalendar from "../pages/ScheduleCalendar";
 import Treatments from "../pages/Treatments";
 export const router = createBrowserRouter([
   {
@@ -47,6 +48,10 @@ export const router = createBrowserRouter([
       {
         path: "availability",
         element: <Availability />,
+      },
+      {
+        path: "schedule",
+        element: <ScheduleCalendar />,
       },
     ],
   },

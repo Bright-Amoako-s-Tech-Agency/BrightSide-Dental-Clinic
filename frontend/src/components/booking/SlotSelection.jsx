@@ -24,11 +24,19 @@ export default function SlotSelection({
   selectedClinician,
   selectedSlot,
   onSlotSelect,
+  initialDate = null,
+  initialTime = null,
 }) {
-  const [date, setDate] = useState(getAccraDate);
+  const [date, setDate] = useState(initialDate || getAccraDate);
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (initialDate) {
+      setDate(initialDate);
+    }
+  }, [initialDate]);
 
   useEffect(() => {
     if (!selectedTreatment?.id || !selectedClinician?.id || !date) {
@@ -53,7 +61,36 @@ export default function SlotSelection({
         });
 
         if (!cancelled) {
-          setSlots(Array.isArray(result.slots) ? result.slots : []);
+          const availableSlots = Array.isArray(result.slots)
+            ? result.slots
+            : [];
+
+          setSlots(availableSlots);
+
+          if (initialTime) {
+            const matchingSlot = availableSlots.find((slot) => {
+              const parts = new Intl.DateTimeFormat("en-GB", {
+                timeZone: "Africa/Accra",
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23",
+              }).formatToParts(new Date(slot.startsAt));
+
+              const hour = parts.find((part) => part.type === "hour")?.value;
+              const minute = parts.find(
+                (part) => part.type === "minute",
+              )?.value;
+
+              return `${hour}:${minute}` === initialTime;
+            });
+
+            if (matchingSlot) {
+              onSlotSelect({
+                ...matchingSlot,
+                date,
+              });
+            }
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -71,7 +108,13 @@ export default function SlotSelection({
     return () => {
       cancelled = true;
     };
-  }, [selectedTreatment?.id, selectedClinician?.id, date]);
+  }, [
+    selectedTreatment?.id,
+    selectedClinician?.id,
+    date,
+    initialTime,
+    onSlotSelect,
+  ]);
 
   function handleDateChange(event) {
     setDate(event.target.value);
