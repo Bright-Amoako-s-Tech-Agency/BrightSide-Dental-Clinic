@@ -7,13 +7,19 @@ import Availability from "../pages/Availability";
 import ClinicianDetails from "../pages/ClinicianDetails";
 import Clinicians from "../pages/Clinicians";
 import Dashboard from "../pages/Dashboard";
+import Home from "../pages/Home";
 import PatientDetails from "../pages/PatientDetails";
 import Patients from "../pages/Patients";
 import ScheduleCalendar from "../pages/ScheduleCalendar";
 import Treatments from "../pages/Treatments";
+
 export const router = createBrowserRouter([
   {
     path: "/",
+    element: <Home />,
+  },
+  {
+    path: "/staff",
     element: <StaffLayout />,
     children: [
       {
@@ -24,7 +30,10 @@ export const router = createBrowserRouter([
         path: "appointments",
         element: <Appointments />,
       },
-      { path: "appointments/:id", element: <AppointmentDetails /> },
+      {
+        path: "appointments/:id",
+        element: <AppointmentDetails />,
+      },
       {
         path: "patients",
         element: <Patients />,

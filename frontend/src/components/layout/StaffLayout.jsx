@@ -2,27 +2,31 @@ import { ChevronDown, Search, UserRoundPlus } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import WalkInBookingModal from "../booking/WalkInBookingModal";
+
 const navigation = [
   {
     label: "Dashboard",
-    to: "/",
+    to: "/staff",
   },
   {
     label: "Appointments",
-    to: "/appointments",
+    to: "/staff/appointments",
   },
   {
     label: "Patients",
-    to: "/patients",
+    to: "/staff/patients",
   },
   {
     label: "Clinicians",
-    to: "/clinicians",
+    to: "/staff/clinicians",
   },
-  { label: "Treatments", to: "/treatments" },
+  {
+    label: "Treatments",
+    to: "/staff/treatments",
+  },
   {
     label: "Schedule",
-    to: "/schedule",
+    to: "/staff/schedule",
   },
 ];
 
