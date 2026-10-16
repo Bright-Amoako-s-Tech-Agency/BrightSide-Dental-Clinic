@@ -4,34 +4,41 @@ import orthodontics from "../assets/orthodontist.jpg";
 import preventive from "../assets/preventive.jpg";
 import restorative from "../assets/restoration.jpg";
 import welcome from "../assets/welcome.jpg";
+import { apiRequest } from "../services/api";
 
-const treatments = [
-  {
-    title: "Preventive & Hygiene",
-    description: "Keep your smile healthy with regular dental care.",
-    href: "/treatments",
+const treatmentPresentation = {
+  "preventive-hygiene": {
     image: preventive,
+    description: "Keep your smile healthy with regular dental care.",
   },
-  {
-    title: "Restorative Care",
-    description: "Restore comfort, function, and confidence in your smile.",
-    href: "/treatments",
+  "restorative-care": {
     image: restorative,
+    description: "Restore comfort, function, and confidence in your smile.",
   },
-  {
-    title: "Cosmetic Dentistry",
-    description: "Explore options to help you feel confident about your smile.",
-    href: "/treatments",
+  "cosmetic-dentistry": {
     image:
       "https://images.unsplash.com/photo-1606811971618-4486d14f3f99?auto=format&fit=crop&w=700&q=80",
+    description: "Explore options to help you feel confident about your smile.",
   },
-  {
-    title: "Orthodontics & Implants",
-    description: "Discover treatment options tailored to your needs.",
-    href: "/treatments",
+  "orthodontics-implants": {
     image: orthodontics,
+    description: "Discover treatment options tailored to your needs.",
   },
-];
+};
+
+function formatTreatmentPrice(treatment) {
+  const { price_type, price_min, price_max } = treatment;
+
+  if (price_type === "range") {
+    return `GH₵${price_min}–${price_max}`;
+  }
+
+  if (price_type === "from") {
+    return `From GH₵${price_min}`;
+  }
+
+  return `GH₵${price_min}`;
+}
 
 function SectionHeading({ eyebrow, title, description }) {
   return (
@@ -74,6 +81,12 @@ const homepageImages = {
 
 export default function Home() {
   const [videoFailed, setVideoFailed] = useState(false);
+  const [treatmentCategories, setTreatmentCategories] = useState([]);
+  const [treatmentsLoading, setTreatmentsLoading] = useState(true);
+  const [treatmentsError, setTreatmentsError] = useState("");
+  const [clinicians, setClinicians] = useState([]);
+  const [cliniciansLoading, setCliniciansLoading] = useState(true);
+  const [cliniciansError, setCliniciansError] = useState("");
 
   const videoRef = useRef(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -90,6 +103,83 @@ export default function Home() {
 
     return () => {
       mediaQuery.removeEventListener("change", updatePreference);
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadClinicians() {
+      try {
+        setCliniciansLoading(true);
+        setCliniciansError("");
+
+        const result = await apiRequest("/clinicians");
+
+        if (!Array.isArray(result?.data)) {
+          throw new Error("Unexpected clinician API response.");
+        }
+
+        if (!ignore) {
+          setClinicians(result.data.filter((clinician) => clinician.active));
+        }
+      } catch (error) {
+        if (!ignore) {
+          setCliniciansError(error.message || "Unable to load clinicians.");
+        }
+      } finally {
+        if (!ignore) {
+          setCliniciansLoading(false);
+        }
+      }
+    }
+
+    loadClinicians();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadTreatmentCategories() {
+      try {
+        setTreatmentsLoading(true);
+        setTreatmentsError("");
+
+        const result = await apiRequest("/treatments");
+
+        // Expected API response: { success: true, data: [...] }
+        const categories = Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+            ? result.data
+            : null;
+
+        if (!categories) {
+          throw new Error("Unexpected treatment API response format.");
+        }
+
+        if (!ignore) {
+          setTreatmentCategories(categories);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setTreatmentsError(error.message || "Unable to load treatments.");
+        }
+      } finally {
+        if (!ignore) {
+          setTreatmentsLoading(false);
+        }
+      }
+    }
+
+    loadTreatmentCategories();
+
+    return () => {
+      ignore = true;
     };
   }, []);
 
@@ -128,12 +218,12 @@ export default function Home() {
             </a>
           </nav>
 
-          <a
-            href="#book"
+          <Link
+            to={"/book"}
             className="shrink-0 rounded-lg bg-[#0d2d26] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#174238] sm:px-5"
           >
             Book an appointment
-          </a>
+          </Link>
         </div>
       </header>
 
@@ -183,12 +273,12 @@ export default function Home() {
               </p>
 
               <div className="mt-9 flex flex-wrap items-center gap-4">
-                <a
-                  href="#book"
+                <Link
+                  to="/book"
                   className="rounded-lg bg-[#b84620] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#9f3c1b]"
                 >
                   Book an appointment
-                </a>
+                </Link>
                 <a
                   href="#treatments"
                   className="rounded-lg border border-white/60 px-6 py-4 text-sm font-semibold text-white transition hover:bg-white/10"
@@ -254,36 +344,56 @@ export default function Home() {
             </div>
 
             <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {treatments.map((treatment, index) => (
-                <article
-                  key={treatment.title}
-                  className="flex min-h-[250px] flex-col rounded-2xl border border-[#dedad1] bg-[#f7f4ed] p-6 transition hover:-translate-y-1 hover:shadow-md"
-                >
-                  <div className="-mx-6 -mt-6 mb-5 overflow-hidden rounded-t-2xl">
-                    <div className="aspect-[5/3]">
-                      <SectionImage
-                        src={treatment.image}
-                        alt={treatment.title}
-                      />
-                    </div>
-                  </div>
-                  <span className="font-serif text-sm text-[#b84620]">
-                    0{index + 1}
-                  </span>
-                  <h3 className="mt-7 font-serif text-2xl text-[#0d2d26]">
-                    {treatment.title}
-                  </h3>
-                  <p className="mt-3 flex-1 text-sm leading-6 text-[#66716a]">
-                    {treatment.description}
-                  </p>
-                  <Link
-                    to={treatment.href}
-                    className="mt-6 text-sm font-semibold text-[#0d2d26] hover:text-[#b84620]"
-                  >
-                    Explore care <span aria-hidden="true">→</span>
-                  </Link>
-                </article>
-              ))}
+              {treatmentsLoading ? (
+                <p>Loading treatments...</p>
+              ) : treatmentsError ? (
+                <p>Unable to load treatments right now.</p>
+              ) : treatmentCategories.length === 0 ? (
+                <p>No treatments are currently available.</p>
+              ) : (
+                treatmentCategories.map((treatment, index) => {
+                  const presentation = treatmentPresentation[
+                    treatment.category?.slug
+                  ] ?? {
+                    image: welcome,
+                    description: treatment.description,
+                  };
+
+                  return (
+                    <article
+                      key={treatment.id}
+                      className="flex min-h-[250px] flex-col rounded-2xl border border-[#dedad1] bg-[#f7f4ed] p-6 transition hover:-translate-y-1 hover:shadow-md"
+                    >
+                      <div className="-mx-6 -mt-6 mb-5 overflow-hidden rounded-t-2xl">
+                        <div className="aspect-[5/3]">
+                          <SectionImage
+                            src={presentation.image}
+                            alt={treatment.name}
+                          />
+                        </div>
+                      </div>
+                      <span className="font-serif text-sm text-[#b84620]">
+                        0{index + 1}
+                      </span>
+                      <h3 className="mt-7 font-serif text-2xl text-[#0d2d26]">
+                        {treatment.name}
+                      </h3>
+                      <p className="mt-3 flex-1 text-sm leading-6 text-[#66716a]">
+                        {presentation.description}
+                      </p>
+                      <p className="mt-4 text-sm font-semibold text-[#0d2d26]">
+                        {formatTreatmentPrice(treatment)}
+                      </p>
+                      <Link
+                        to={treatment.href ?? "/treatments"}
+                        className="mt-6 text-sm font-semibold text-[#0d2d26] hover:text-[#b84620]"
+                      >
+                        Learn more <span aria-hidden="true">→</span>
+                      </Link>
+                    </article>
+                  );
+                })
+              )}
             </div>
           </div>
         </section>
@@ -307,16 +417,74 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="mt-10 rounded-2xl border border-[#e5e1d8] bg-white/50 p-8 sm:p-12">
-            <p className="max-w-2xl font-serif text-2xl leading-relaxed text-[#0d2d26] sm:text-3xl">
-              Professional care begins with listening, understanding, and
-              treating every patient with kindness.
+          {cliniciansLoading ? (
+            <p className="mt-10 text-sm text-[#66716a]">
+              Loading our care team...
             </p>
-            <p className="mt-5 text-sm leading-6 text-[#66716a]">
-              Clinician profiles and photographs will be connected to the
-              existing clinician data in the next implementation step.
+          ) : cliniciansError ? (
+            <p className="mt-10 text-sm text-[#66716a]" role="status">
+              Our clinician profiles are temporarily unavailable.
             </p>
-          </div>
+          ) : clinicians.length === 0 ? (
+            <p className="mt-10 text-sm text-[#66716a]">
+              Clinician profiles will be available soon.
+            </p>
+          ) : (
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {clinicians.map((clinician) => (
+                <article
+                  key={clinician.id}
+                  className="overflow-hidden rounded-2xl border border-[#e5e1d8] bg-white/70"
+                >
+                  {clinician.image_url ? (
+                    <img
+                      src={clinician.image_url}
+                      alt={clinician.name}
+                      className="h-64 w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-64 items-center justify-center bg-[#e8e9df]"
+                      aria-label={`No photograph available for ${clinician.name}`}
+                    >
+                      <div className="flex h-24 w-24 items-center justify-center rounded-full border border-[#c9d0c5] bg-[#f7f4ed] font-serif text-3xl text-[#0d2d26]">
+                        {clinician.name
+                          .split(" ")
+                          .filter((part) => !["Dr.", "Dr"].includes(part))
+                          .map((part) => part[0])
+                          .slice(0, 2)
+                          .join("")
+                          .toUpperCase()}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="p-6">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#b84620]">
+                      {clinician.title}
+                    </p>
+
+                    <h3 className="mt-2 font-serif text-2xl text-[#0d2d26]">
+                      {clinician.name}
+                    </h3>
+
+                    <p className="mt-2 text-sm font-medium text-[#66716a]">
+                      {clinician.specialty}
+                    </p>
+
+                    <p className="mt-4 text-sm leading-6 text-[#66716a]">
+                      {clinician.bio}
+                    </p>
+
+                    <p className="mt-4 text-sm text-[#0d2d26]">
+                      {clinician.experience_years} years of experience
+                    </p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Testimonials */}
@@ -355,7 +523,7 @@ export default function Home() {
             </div>
 
             <a
-              href="mailto:hello@brightsmile.example"
+              href="mailto:owurakufrimpong772@gmail.com?subject=Appointment%20enquiry"
               className="inline-flex shrink-0 justify-center rounded-lg bg-[#b84620] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#9f3c1b]"
             >
               Ask about an appointment

@@ -4,6 +4,7 @@ import StaffLayout from "../components/layout/StaffLayout";
 import AppointmentDetails from "../pages/AppointmentDetails";
 import Appointments from "../pages/Appointments";
 import Availability from "../pages/Availability";
+import Booking from "../pages/Booking";
 import ClinicianDetails from "../pages/ClinicianDetails";
 import Clinicians from "../pages/Clinicians";
 import Dashboard from "../pages/Dashboard";
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
     path: "/",
     element: <Home />,
   },
+  { path: "/book", element: <Booking /> },
   {
     path: "/staff",
     element: <StaffLayout />,
