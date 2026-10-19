@@ -5,6 +5,10 @@ import AppointmentDetails from "../pages/AppointmentDetails";
 import Appointments from "../pages/Appointments";
 import Availability from "../pages/Availability";
 import Booking from "../pages/Booking";
+import BookingConfirmation from "../pages/BookingConfirmation";
+import MyAppointments from "../pages/MyAppointments";
+import PublicClinicians from "../pages/PublicClinicians";
+import PublicTreatments from "../pages/PublicTreatments";
 import ClinicianDetails from "../pages/ClinicianDetails";
 import Clinicians from "../pages/Clinicians";
 import Dashboard from "../pages/Dashboard";
@@ -19,7 +23,11 @@ export const router = createBrowserRouter([
     path: "/",
     element: <Home />,
   },
+  { path: "/treatments", element: <PublicTreatments /> },
+  { path: "/clinicians", element: <PublicClinicians /> },
   { path: "/book", element: <Booking /> },
+  { path: "/booking/confirmation", element: <BookingConfirmation /> },
+  { path: "/my-appointments", element: <MyAppointments /> },
   {
     path: "/staff",
     element: <StaffLayout />,

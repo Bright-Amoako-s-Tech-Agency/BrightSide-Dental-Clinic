@@ -1,5 +1,6 @@
 import { supabase } from "../../config/supabase.js";
 import { AppError } from "../../utils/AppError.js";
+import { normalizePhone } from "../patients/patient.service.js";
 
 const PENDING_HOLD_MINUTES = 10;
 
@@ -385,7 +386,7 @@ export async function createAppointment(data) {
 
 export async function getAppointments(filters = {}) {
   await expirePendingAppointments();
-  const { status, clinicianId, date, patientId } = filters;
+  const { status, clinicianId, date, patientId, phone } = filters;
 
   if (status) {
     const allowedStatuses = [
@@ -407,6 +408,39 @@ export async function getAppointments(filters = {}) {
 
   if (patientId && !isValidUuid(patientId)) {
     throw new AppError("Valid patientId is required", 400);
+  }
+
+  let resolvedPatientIds = [];
+  if (patientId) {
+    resolvedPatientIds = [patientId];
+  } else if (phone) {
+    const rawPhone = String(phone).trim();
+    const normalized = normalizePhone(rawPhone);
+
+    const { data: allPatients } = await supabase
+      .from("patients")
+      .select("id, phone, notes");
+
+    if (allPatients) {
+      const matched = allPatients.filter((p) => {
+        if (!p.phone && !p.notes) return false;
+        if (p.phone === rawPhone) return true;
+        if (normalized && normalizePhone(p.phone) === normalized) return true;
+        if (
+          p.notes &&
+          (p.notes.includes(rawPhone) ||
+            (normalized && p.notes.includes(normalized)))
+        ) {
+          return true;
+        }
+        return false;
+      });
+      resolvedPatientIds = matched.map((p) => p.id);
+    }
+
+    if (resolvedPatientIds.length === 0) {
+      return [];
+    }
   }
 
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -434,7 +468,8 @@ export async function getAppointments(filters = {}) {
         first_name,
         last_name,
         phone,
-        email
+        email,
+        date_of_birth
       ),
       clinician:clinicians (
         id,
@@ -461,8 +496,10 @@ export async function getAppointments(filters = {}) {
   if (clinicianId) {
     query = query.eq("clinician_id", clinicianId);
   }
-  if (patientId) {
-    query = query.eq("patient_id", patientId);
+  if (resolvedPatientIds.length === 1) {
+    query = query.eq("patient_id", resolvedPatientIds[0]);
+  } else if (resolvedPatientIds.length > 1) {
+    query = query.in("patient_id", resolvedPatientIds);
   }
 
   if (date) {
@@ -513,7 +550,8 @@ export async function getAppointmentById(appointmentId) {
         first_name,
         last_name,
         phone,
-        email
+        email,
+        date_of_birth
       ),
       clinician:clinicians (
         id,

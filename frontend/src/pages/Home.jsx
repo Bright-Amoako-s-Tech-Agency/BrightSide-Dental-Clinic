@@ -216,14 +216,28 @@ export default function Home() {
             >
               About us
             </a>
+            <Link
+              to="/my-appointments"
+              className="text-sm font-medium text-[#46504c] hover:text-[#b84620]"
+            >
+              My Appointments
+            </Link>
           </nav>
 
-          <Link
-            to={"/book"}
-            className="shrink-0 rounded-lg bg-[#0d2d26] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#174238] sm:px-5"
-          >
-            Book an appointment
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/my-appointments"
+              className="md:hidden shrink-0 rounded-lg border border-[#dcd9ce] bg-white px-3 py-2.5 text-xs font-medium text-[#0d2d26] transition"
+            >
+              Lookup
+            </Link>
+            <Link
+              to={"/book"}
+              className="shrink-0 rounded-lg bg-[#0d2d26] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#174238] sm:px-5"
+            >
+              Book an appointment
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -410,10 +424,10 @@ export default function Home() {
               description="Get to know the clinicians who will support your dental health."
             />
             <Link
-              to="/staff/clinicians"
-              className="text-sm font-semibold text-[#0d2d26] underline decoration-[#b84620] underline-offset-4"
+              to="/clinicians"
+              className="text-sm font-semibold text-[#0d2d26] underline decoration-[#b84620] underline-offset-4 hover:text-[#b84620]"
             >
-              Clinician information
+              Meet all clinicians
             </Link>
           </div>
 
@@ -434,7 +448,7 @@ export default function Home() {
               {clinicians.map((clinician) => (
                 <article
                   key={clinician.id}
-                  className="overflow-hidden rounded-2xl border border-[#e5e1d8] bg-white/70"
+                  className="flex flex-col overflow-hidden rounded-2xl border border-[#e5e1d8] bg-white/70 shadow-sm transition hover:shadow-md"
                 >
                   {clinician.image_url ? (
                     <img
@@ -460,7 +474,7 @@ export default function Home() {
                     </div>
                   )}
 
-                  <div className="p-6">
+                  <div className="flex flex-1 flex-col p-6">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#b84620]">
                       {clinician.title}
                     </p>
@@ -473,13 +487,21 @@ export default function Home() {
                       {clinician.specialty}
                     </p>
 
-                    <p className="mt-4 text-sm leading-6 text-[#66716a]">
+                    <p className="mt-4 flex-1 text-sm leading-6 text-[#66716a]">
                       {clinician.bio}
                     </p>
 
-                    <p className="mt-4 text-sm text-[#0d2d26]">
-                      {clinician.experience_years} years of experience
-                    </p>
+                    <div className="mt-5 flex items-center justify-between border-t border-[#f0eee6] pt-4">
+                      <p className="text-xs text-[#66716a]">
+                        {clinician.experience_years} years experience
+                      </p>
+                      <Link
+                        to={`/book?clinicianId=${clinician.id}`}
+                        className="rounded-lg bg-[#0d2d26] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#19463a]"
+                      >
+                        Book visit →
+                      </Link>
+                    </div>
                   </div>
                 </article>
               ))}

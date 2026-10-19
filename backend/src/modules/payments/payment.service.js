@@ -1,5 +1,6 @@
 import { supabase } from "../../config/supabase.js";
 import { AppError } from "../../utils/AppError.js";
+import { sendAppointmentConfirmationEmail } from "../../utils/email.js";
 import { getPaymentProvider } from "./payment.provider.js";
 
 function isValidUuid(value) {
@@ -14,18 +15,19 @@ function isValidUuid(value) {
 // Initialize payment
 
 export async function initializePayment(data) {
-    const { appointmentId, method = "momo", provider = "momo" } = data;
+    const { appointmentId, method = "paystack", provider = "paystack" } = data;
 
     if (!isValidUuid(appointmentId)) {
         throw new AppError("Valid appointmentId is required", 400);
     }
 
-    if (provider !== "momo") {
-        throw new AppError("Only MoMo is currently supported", 400);
-    }
+    const SUPPORTED_PROVIDERS = ["paystack"];
 
-    if (method !== "momo") {
-        throw new AppError("Only MoMo payment method is currently supported", 400);
+    if (!SUPPORTED_PROVIDERS.includes(provider)) {
+        throw new AppError(
+            `Unsupported payment provider: "${provider}". Supported: ${SUPPORTED_PROVIDERS.join(", ")}`,
+            400,
+        );
     }
 
     // Find appointment
@@ -45,7 +47,8 @@ export async function initializePayment(data) {
         id,
         first_name,
         last_name,
-        phone
+        phone,
+        email
       )
     `,
         )
@@ -179,6 +182,7 @@ export async function initializePayment(data) {
             amount,
             currency: "GHS",
             phone: appointment.patient.phone,
+            email: appointment.patient.email || null,
         });
     } catch (error) {
         // The payment was created locally, but the external
@@ -403,8 +407,13 @@ export async function handlePaymentWebhook(data) {
     // Verify provider
     // --------------------------------------------------
 
-    if (payment.provider !== "momo") {
-        throw new AppError("Invalid payment provider", 400);
+    const SUPPORTED_PROVIDERS = ["paystack"];
+
+    if (!SUPPORTED_PROVIDERS.includes(payment.provider)) {
+        throw new AppError(
+            `Invalid payment provider: "${payment.provider}"`,
+            400,
+        );
     }
 
     // --------------------------------------------------
@@ -521,6 +530,52 @@ export async function handlePaymentWebhook(data) {
             };
         }
 
+        // Asynchronously send email confirmation if patient has email
+        (async () => {
+            try {
+                const { data: fullAppt } = await supabase
+                    .from("appointments")
+                    .select(`
+                        id,
+                        starts_at,
+                        ends_at,
+                        total_amount,
+                        deposit_amount,
+                        balance_amount,
+                        patient:patients (
+                            id,
+                            first_name,
+                            last_name,
+                            phone,
+                            email
+                        ),
+                        clinician:clinicians (
+                            id,
+                            name,
+                            title
+                        ),
+                        treatment:treatments (
+                            id,
+                            name,
+                            duration_minutes
+                        )
+                    `)
+                    .eq("id", appointment.id)
+                    .maybeSingle();
+
+                if (fullAppt?.patient) {
+                    await sendAppointmentConfirmationEmail({
+                        patient: fullAppt.patient,
+                        appointment: fullAppt,
+                        clinician: fullAppt.clinician,
+                        treatment: fullAppt.treatment,
+                    });
+                }
+            } catch (err) {
+                console.error("[Email] Error dispatching confirmation email:", err);
+            }
+        })();
+
         return {
             payment: updatedPayment,
             appointment,
@@ -569,8 +624,13 @@ export async function checkPaymentStatus(paymentId) {
         throw new AppError("Payment not found", 404);
     }
 
-    if (payment.provider !== "momo") {
-        throw new AppError("Invalid payment provider", 400);
+    const SUPPORTED_PROVIDERS = ["paystack"];
+
+    if (!SUPPORTED_PROVIDERS.includes(payment.provider)) {
+        throw new AppError(
+            `Invalid payment provider: "${payment.provider}"`,
+            400,
+        );
     }
 
     if (!payment.provider_reference) {

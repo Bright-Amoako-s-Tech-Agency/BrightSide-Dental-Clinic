@@ -52,6 +52,7 @@ export async function getAppointmentsHandler(req, res) {
     clinicianId: req.query.clinicianId,
     date: req.query.date,
     patientId: req.query.patientId,
+    phone: req.query.phone,
   });
 
   return res.status(200).json({
