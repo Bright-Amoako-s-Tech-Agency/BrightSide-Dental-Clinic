@@ -52,7 +52,7 @@ export async function paymentWebhookHandler(req, res) {
   // manual test POSTs still work locally.
   // -------------------------------------------------------------------
   const signature = req.headers["x-paystack-signature"];
-  const rawBody = JSON.stringify(req.body); // express.json() already parsed it
+  const rawBody = req.rawBody || JSON.stringify(req.body);
 
   if (
     process.env.PAYSTACK_SECRET_KEY &&

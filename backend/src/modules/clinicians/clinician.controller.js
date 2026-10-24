@@ -1,4 +1,8 @@
-import { findClinicianById, findClinicians } from "./clinician.service.js";
+import {
+    createClinician,
+    findClinicianById,
+    findClinicians,
+} from "./clinician.service.js";
 
 export async function getClinicians(req, res) {
   const clinicians = await findClinicians();
@@ -16,4 +20,18 @@ export async function getClinicianById(req, res) {
     success: true,
     data: clinician,
   });
+}
+
+export async function createClinicianHandler(req, res, next) {
+  try {
+    const clinician = await createClinician(req.body);
+
+    res.status(201).json({
+      success: true,
+      message: "Clinician created successfully",
+      data: clinician,
+    });
+  } catch (error) {
+    next(error);
+  }
 }

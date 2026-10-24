@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireStaffAuth } from "../../middleware/auth.js";
 import {
     createTreatmentHandler,
     getTreatmentById,
@@ -11,6 +12,7 @@ const router = Router();
 router.get("/", getTreatments);
 router.get("/:id", getTreatmentById);
 
-router.post("/", createTreatmentHandler);
-router.patch("/:id", updateTreatmentHandler);
+router.post("/", requireStaffAuth, createTreatmentHandler);
+router.patch("/:id", requireStaffAuth, updateTreatmentHandler);
+
 export default router;

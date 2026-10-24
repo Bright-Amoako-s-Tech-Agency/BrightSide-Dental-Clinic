@@ -15,5 +15,10 @@ export const env = {
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
 
+  paystackSecretKey: process.env.PAYSTACK_SECRET_KEY,
+  paystackWebhookUrl: process.env.PAYSTACK_WEBHOOK_URL,
+
+  staffSecretKey: process.env.STAFF_SECRET_KEY || "brightsmile-staff-demo-key",
+
   clientUrl: process.env.CLIENT_URL || "http://localhost:5173",
 };

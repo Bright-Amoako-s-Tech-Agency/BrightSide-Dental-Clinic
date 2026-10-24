@@ -1,6 +1,8 @@
-import { ChevronDown, Search, UserRoundPlus } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, UserRoundPlus } from "lucide-react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+
+import { getClinicians } from "../../services/clinicianApi";
 import WalkInBookingModal from "../booking/WalkInBookingModal";
 
 const navigation = [
@@ -39,13 +41,68 @@ function navLinkClass({ isActive }) {
   ].join(" ");
 }
 
+function getInitials(name) {
+  if (!name) return "DR";
+
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+
+  return initials || "DR";
+}
+
 export default function StaffLayout() {
   const [walkInOpen, setWalkInOpen] = useState(false);
+  const [staffClinicians, setStaffClinicians] = useState([]);
+  const [selectedClinicianId, setSelectedClinicianId] = useState("");
   const [bookingDefaults, setBookingDefaults] = useState({
     initialDate: null,
     initialTime: null,
     initialClinician: null,
   });
+
+  useEffect(() => {
+    async function loadStaffClinicians() {
+      try {
+        const clinicians = await getClinicians();
+        const safeClinicians = Array.isArray(clinicians) ? clinicians : [];
+        setStaffClinicians(safeClinicians);
+
+        const savedId = window.localStorage.getItem(
+          "brightSmileDutyClinicianId",
+        );
+        const preferredId = safeClinicians.some(
+          (clinician) => clinician.id === savedId,
+        )
+          ? savedId
+          : safeClinicians[0]?.id || "";
+
+        setSelectedClinicianId(preferredId);
+      } catch (error) {
+        console.error("Failed to load staff clinicians", error);
+        setStaffClinicians([]);
+        setSelectedClinicianId("");
+      }
+    }
+
+    loadStaffClinicians();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedClinicianId) return;
+    window.localStorage.setItem(
+      "brightSmileDutyClinicianId",
+      selectedClinicianId,
+    );
+  }, [selectedClinicianId]);
+
+  const dutyClinician =
+    staffClinicians.find((clinician) => clinician.id === selectedClinicianId) ||
+    staffClinicians[0] ||
+    null;
 
   function openWalkInBooking() {
     setBookingDefaults({
@@ -73,11 +130,11 @@ export default function StaffLayout() {
       initialClinician: null,
     });
   }
+
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-[#10231f]">
       <header className="border-b border-[#e5e1d8] bg-[#f7f4ed]">
         <div className="mx-auto flex h-[72px] max-w-[1440px] items-center gap-6 px-6 lg:px-10">
-          {/* Brand */}
           <div className="flex min-w-fit items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0d2d26] text-white">
               <span className="text-lg font-semibold">W</span>
@@ -101,24 +158,14 @@ export default function StaffLayout() {
             </div>
           </div>
 
-          {/* Navigation */}
           <nav className="hidden flex-1 items-center gap-1 lg:flex">
             {navigation.map((item) => (
               <NavLink key={item.to} to={item.to} className={navLinkClass}>
                 {item.label}
               </NavLink>
             ))}
-
-            <button
-              type="button"
-              className="rounded-xl p-2 text-[#59615d] transition-colors hover:bg-[#eeece5]"
-              aria-label="Search"
-            >
-              <Search size={17} strokeWidth={1.8} />
-            </button>
           </nav>
 
-          {/* Actions */}
           <div className="ml-auto flex items-center gap-3">
             <button
               type="button"
@@ -131,16 +178,35 @@ export default function StaffLayout() {
 
             <div className="hidden items-center gap-3 border-l border-[#dedad1] pl-4 sm:flex">
               <div className="text-right leading-tight">
-                <p className="text-sm font-semibold text-[#182a25]">
-                  Dr. Abena Mensah
-                </p>
+                <label htmlFor="duty-clinician-select" className="sr-only">
+                  Select clinician on duty
+                </label>
+                <select
+                  id="duty-clinician-select"
+                  value={selectedClinicianId}
+                  onChange={(event) =>
+                    setSelectedClinicianId(event.target.value)
+                  }
+                  className="w-40 rounded-lg border border-[#d9d3c8] bg-white px-2 py-1.5 text-sm font-semibold text-[#182a25] outline-none transition focus:border-[#0d2d26]"
+                  aria-label="Clinician on duty"
+                >
+                  {staffClinicians.length === 0 ? (
+                    <option value="">No clinicians</option>
+                  ) : (
+                    staffClinicians.map((clinician) => (
+                      <option key={clinician.id} value={clinician.id}>
+                        {clinician.name || "Unnamed clinician"}
+                      </option>
+                    ))
+                  )}
+                </select>
                 <p className="text-[11px] text-[#69706c]">
-                  Lead Surgeon • Duty
+                  {dutyClinician?.title || "Clinician"} • On duty
                 </p>
               </div>
 
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#d9d5ca] text-xs font-bold text-[#0d2d26]">
-                AM
+                {getInitials(dutyClinician?.name || "Duty")}
               </div>
 
               <ChevronDown size={15} className="text-[#69706c]" />
@@ -149,7 +215,7 @@ export default function StaffLayout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">
+      <main className="mx-auto max-w-360 px-6 py-8 lg:px-10">
         <Outlet
           context={{
             openCalendarBooking,
