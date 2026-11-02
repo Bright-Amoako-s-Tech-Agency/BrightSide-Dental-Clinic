@@ -30,10 +30,18 @@ app.use(
       if (!origin) return callback(null, true);
 
       const normalizedOrigin = origin.replace(/\/+$/, "");
+      
+      let isVercel = false;
+      try {
+        const parsed = new URL(origin);
+        isVercel = parsed.hostname.endsWith(".vercel.app");
+      } catch {}
+
       if (
         allowedOrigins.length === 0 ||
         allowedOrigins.includes("*") ||
         allowedOrigins.includes(normalizedOrigin) ||
+        isVercel ||
         env.nodeEnv !== "production"
       ) {
         return callback(null, true);
@@ -44,6 +52,8 @@ app.use(
       );
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-staff-key"],
   }),
 );
 
