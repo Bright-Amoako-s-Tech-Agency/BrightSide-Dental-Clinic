@@ -16,9 +16,33 @@ import treatmentRoutes from "./modules/treatments/treatment.routes.js";
 
 const app = express();
 
+// Parse and normalize allowed CORS origins (supports single origin or comma-separated list)
+const rawClientUrls = env.clientUrl || "http://localhost:5173";
+const allowedOrigins = rawClientUrls
+  .split(",")
+  .map((url) => url.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (such as mobile apps, curl, or server-to-server health pings)
+      if (!origin) return callback(null, true);
+
+      const normalizedOrigin = origin.replace(/\/+$/, "");
+      if (
+        allowedOrigins.length === 0 ||
+        allowedOrigins.includes("*") ||
+        allowedOrigins.includes(normalizedOrigin) ||
+        env.nodeEnv !== "production"
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error(`Blocked by CORS policy: Origin ${origin} is not allowed.`),
+      );
+    },
     credentials: true,
   }),
 );
@@ -44,6 +68,16 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 if (env.nodeEnv !== "test") {
   app.use(morgan("dev"));
 }
+
+// Health check and root ping for Render and uptime monitors (handles GET and HEAD)
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "BrightSmile Dental Clinic API is online and healthy",
+    version: "1.0.0",
+    healthCheck: "/api/health",
+  });
+});
 
 // Rate limiting: general API limiter (100 requests per minute per IP)
 const apiLimiter = rateLimit({
