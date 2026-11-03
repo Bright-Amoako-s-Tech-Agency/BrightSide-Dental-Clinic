@@ -224,6 +224,7 @@ export default function Booking() {
 
     let cancelled = false;
     let intervalId;
+    let consecutiveErrors = 0;
 
     async function checkStatus() {
       try {
@@ -231,6 +232,7 @@ export default function Booking() {
 
         if (cancelled) return;
 
+        consecutiveErrors = 0;
         const statusResult = result?.data;
         const currentStatus =
           statusResult?.payment?.status || statusResult?.provider?.status;
@@ -261,9 +263,22 @@ export default function Booking() {
         }
       } catch (error) {
         if (!cancelled) {
-          setPaymentError(
-            error.message || "We couldn't check the payment status.",
-          );
+          const errMsg = error.message || "";
+          // If the backend is still finishing deploy and reports 'abandoned', treat as pending authorization
+          if (errMsg.toLowerCase().includes("abandoned")) {
+            setPaymentStatus("pending");
+            setPaymentError("");
+            return;
+          }
+
+          consecutiveErrors++;
+          // Only show fatal error and pause interval if repeatedly failing with non-abandoned error
+          if (consecutiveErrors >= 6) {
+            window.clearInterval(intervalId);
+            setPaymentError(
+              errMsg || "We couldn't check the payment status.",
+            );
+          }
         }
       }
     }
@@ -444,6 +459,36 @@ export default function Booking() {
       );
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleRetryPayment() {
+    const apptId = bookingResult?.appointment?.id;
+    if (!apptId) return;
+
+    setPaymentLoading(true);
+    setPaymentError("");
+    setPaymentStatus("pending");
+
+    try {
+      const paymentResult = await apiRequest("/payments/initialize", {
+        method: "POST",
+        body: JSON.stringify({
+          appointmentId: apptId,
+          method: "paystack",
+          provider: "paystack",
+        }),
+      });
+
+      const initializedPayment = paymentResult?.data?.payment;
+      if (initializedPayment) {
+        setPayment(initializedPayment);
+        setPaymentStatus(initializedPayment.status);
+      }
+    } catch (err) {
+      setPaymentError(err.message || "Could not restart payment prompt.");
+    } finally {
+      setPaymentLoading(false);
     }
   }
 
@@ -877,22 +922,25 @@ export default function Booking() {
                   )}
 
                   {(paymentStatus === "failed" ||
-                    paymentStatus === "cancelled") && (
+                    paymentStatus === "cancelled" ||
+                    Boolean(paymentError)) && (
                     <div className="mt-5 rounded-2xl border border-[#e4c8be] bg-[#fff5f1] p-5">
                       <p className="font-semibold text-[#8f3217]">
-                        Payment was not completed
+                        {paymentError || "Payment was not completed"}
                       </p>
 
                       <p className="mt-1 text-sm leading-6 text-[#6b5148]">
-                        The payment prompt timed out or was cancelled. You can
-                        try paying again while your slot is on hold.
+                        The prompt timed out or could not be verified. You can retry sending the deposit prompt to your phone.
                       </p>
-                    </div>
-                  )}
 
-                  {paymentError && (
-                    <div className="mt-5 rounded-2xl border border-[#e4c8be] bg-[#fff5f1] p-4 text-sm text-[#8f3217]">
-                      {paymentError}
+                      <button
+                        type="button"
+                        onClick={handleRetryPayment}
+                        disabled={paymentLoading}
+                        className="mt-3.5 inline-flex items-center gap-2 rounded-xl bg-[#0d2d26] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#19463a] disabled:opacity-60"
+                      >
+                        {paymentLoading ? "Re-sending prompt..." : "Retry MoMo Deposit Prompt"}
+                      </button>
                     </div>
                   )}
                 </div>

@@ -84,7 +84,7 @@ app.get("/", (req, res) => {
   res.json({
     success: true,
     message: "BrightSmile Dental Clinic API is online and healthy",
-    version: "1.0.0",
+    version: "1.0.2",
     healthCheck: "/api/health",
   });
 });
