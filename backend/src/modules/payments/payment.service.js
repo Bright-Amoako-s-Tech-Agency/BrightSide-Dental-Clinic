@@ -324,6 +324,11 @@ export async function handlePaymentWebhook(data) {
         canceled: "cancelled",
         timeout: "failed",
         pending: "pending",
+        ongoing: "pending",
+        processing: "pending",
+        queued: "pending",
+        abandoned: "pending",
+        reversed: "failed",
     };
 
     const paymentStatus = statusMap[normalizedStatus];
@@ -654,6 +659,9 @@ export async function checkPaymentStatus(paymentId) {
 
     return {
         ...result,
-        provider: providerResult,
+        provider: {
+            ...providerResult,
+            status: result.payment?.status || providerResult.status,
+        },
     };
 }

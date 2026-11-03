@@ -236,8 +236,10 @@ export default function Booking() {
           statusResult?.payment?.status || statusResult?.provider?.status;
 
         if (currentStatus) {
-          const lowerStatus = String(currentStatus).toLowerCase();
+          const rawLower = String(currentStatus).toLowerCase();
+          const lowerStatus = rawLower === "abandoned" ? "pending" : rawLower;
           setPaymentStatus(lowerStatus);
+          setPaymentError("");
 
           if (lowerStatus === "successful") {
             const targetApptId =
