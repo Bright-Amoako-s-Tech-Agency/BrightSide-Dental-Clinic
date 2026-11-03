@@ -5,6 +5,7 @@ import {
     getPaymentHandler,
     initializePaymentHandler,
     paymentWebhookHandler,
+    submitPaymentOtpHandler,
 } from "./payment.controller.js";
 
 const router = Router();
@@ -12,6 +13,8 @@ const router = Router();
 router.post("/initialize", initializePaymentHandler);
 
 router.get("/:id/status", checkPaymentStatusHandler);
+
+router.post("/:id/otp", submitPaymentOtpHandler);
 
 router.get("/:id", getPaymentHandler);
 

@@ -3,6 +3,7 @@ import {
   getPaymentById,
   handlePaymentWebhook,
   initializePayment,
+  submitPaymentOtp,
 } from "./payment.service.js";
 
 import {
@@ -36,6 +37,17 @@ export async function checkPaymentStatusHandler(req, res) {
 
   return res.status(200).json({
     success: true,
+    data: result,
+  });
+}
+
+export async function submitPaymentOtpHandler(req, res) {
+  const { otp } = req.body;
+  const result = await submitPaymentOtp(req.params.id, otp);
+
+  return res.status(200).json({
+    success: true,
+    message: "OTP submitted successfully",
     data: result,
   });
 }

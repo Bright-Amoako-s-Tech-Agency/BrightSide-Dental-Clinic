@@ -250,6 +250,39 @@ async function getPaymentStatus(providerReference) {
 }
 
 // ---------------------------------------------------------------------------
+// OTP submission (Telecel / Vodafone)
+// ---------------------------------------------------------------------------
+
+/**
+ * @param {object} opts
+ * @param {string} opts.providerReference - Paystack reference
+ * @param {string} opts.otp - OTP entered by user
+ */
+async function submitOtp({ providerReference, otp }) {
+  if (!providerReference || !otp) {
+    throw new Error("providerReference and otp are required");
+  }
+
+  const data = await paystackFetch("/charge/submit_otp", {
+    method: "POST",
+    body: JSON.stringify({
+      reference: providerReference,
+      otp: String(otp).trim(),
+    }),
+  });
+
+  const tx = data?.data || {};
+
+  return {
+    status: tx.status || "pending",
+    amount: tx.amount ? tx.amount / 100 : undefined,
+    financialTransactionId: tx.reference || providerReference,
+    message: tx.gateway_response || data?.message || "OTP submitted",
+    raw: tx,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Provider factory
 // ---------------------------------------------------------------------------
 
@@ -260,6 +293,7 @@ export function getPaymentProvider(provider) {
         name: "paystack",
         initializePayment,
         getPaymentStatus,
+        submitOtp,
       };
 
     default:

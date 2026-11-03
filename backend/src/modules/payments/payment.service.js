@@ -665,3 +665,80 @@ export async function checkPaymentStatus(paymentId) {
         },
     };
 }
+
+export async function submitPaymentOtp(paymentId, otp) {
+    if (!isValidUuid(paymentId)) {
+        throw new AppError("Valid payment ID is required", 400);
+    }
+
+    if (!otp || !String(otp).trim()) {
+        throw new AppError("OTP code is required", 400);
+    }
+
+    const { data: payment, error } = await supabase
+        .from("payments")
+        .select(
+            `
+      id,
+      appointment_id,
+      amount,
+      currency,
+      method,
+      provider,
+      status,
+      provider_reference,
+      created_at
+      `,
+        )
+        .eq("id", paymentId)
+        .maybeSingle();
+
+    if (error) {
+        throw error;
+    }
+
+    if (!payment) {
+        throw new AppError("Payment not found", 404);
+    }
+
+    if (payment.status === "successful") {
+        return {
+            payment,
+            alreadyProcessed: true,
+        };
+    }
+
+    if (!payment.provider_reference) {
+        throw new AppError("Payment has no provider reference", 409);
+    }
+
+    const paymentProvider = getPaymentProvider(payment.provider);
+    if (!paymentProvider.submitOtp) {
+        throw new AppError(
+            "Payment provider does not support OTP submission",
+            400,
+        );
+    }
+
+    const otpResult = await paymentProvider.submitOtp({
+        providerReference: payment.provider_reference,
+        otp,
+    });
+
+    const normalizedStatus = String(otpResult.status || "").toLowerCase();
+
+    const result = await handlePaymentWebhook({
+        referenceId: payment.id,
+        status: normalizedStatus,
+        amount: otpResult.amount,
+        transactionId: otpResult.financialTransactionId || null,
+    });
+
+    return {
+        ...result,
+        provider: {
+            ...otpResult,
+            status: result.payment?.status || otpResult.status,
+        },
+    };
+}

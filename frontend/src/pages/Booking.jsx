@@ -59,6 +59,8 @@ export default function Booking() {
   const [paymentStatus, setPaymentStatus] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const [otp, setOtp] = useState("");
+  const [submittingOtp, setSubmittingOtp] = useState(false);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -492,6 +494,41 @@ export default function Booking() {
     }
   }
 
+  async function handleSubmitOtp(e) {
+    if (e) e.preventDefault();
+    if (!payment?.id || !otp.trim()) return;
+
+    setSubmittingOtp(true);
+    setPaymentError("");
+
+    try {
+      const res = await apiRequest(`/payments/${payment.id}/otp`, {
+        method: "POST",
+        body: JSON.stringify({ otp: otp.trim() }),
+      });
+
+      const currentStatus =
+        res?.data?.payment?.status || res?.data?.provider?.status;
+      if (currentStatus) {
+        const lower = String(currentStatus).toLowerCase();
+        setPaymentStatus(lower);
+        if (lower === "successful") {
+          const targetApptId =
+            res?.data?.appointment?.id || bookingResult?.appointment?.id;
+          if (targetApptId) {
+            navigate(`/booking/confirmation?ref=${targetApptId}`);
+          }
+        }
+      }
+    } catch (err) {
+      setPaymentError(
+        err.message || "Failed to submit OTP. Please verify and try again.",
+      );
+    } finally {
+      setSubmittingOtp(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f4ed] text-[#10231f]">
       {/* Top Header */}
@@ -880,18 +917,60 @@ export default function Booking() {
                   )}
 
                   {payment && paymentStatus === "pending" && !paymentLoading && (
-                    <div className="mt-5 rounded-2xl border border-[#d9d3c8] p-5">
-                      <p className="font-semibold text-[#0d2d26]">
-                        Mobile Money prompt sent to your phone
-                      </p>
+                    <div className="mt-5 rounded-2xl border border-[#d9d3c8] p-5 space-y-4">
+                      <div>
+                        <p className="font-semibold text-base text-[#0d2d26]">
+                          Mobile Money authorization sent to your phone
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-[#5f625d]">
+                          Follow the instructions for your network below to approve the deposit:
+                        </p>
+                      </div>
 
-                      <p className="mt-1 text-sm leading-6 text-[#5f625d]">
-                        Check your handset and enter your MoMo PIN to authorize
-                        the payment. Works on MTN, Telecel, and AirtelTigo.
-                      </p>
+                      {/* Telecel / Vodafone Ghana OTP Form */}
+                      <div className="rounded-xl border border-[#d2cbbe] bg-[#faf8f3] p-4">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded bg-[#e03a2f]/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#e03a2f]">
+                            Telecel / Vodafone
+                          </span>
+                          <span className="text-xs font-medium text-[#2d3834]">Enter SMS Authorization Code</span>
+                        </div>
+                        <p className="mt-1.5 text-xs leading-5 text-[#5f625d]">
+                          If Telecel sent you an SMS with an authorization / OTP code, enter it below to approve:
+                        </p>
+                        <form onSubmit={handleSubmitOtp} className="mt-3 flex flex-col sm:flex-row gap-2.5">
+                          <input
+                            type="text"
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            placeholder="Enter 4-6 digit code"
+                            className="flex-1 rounded-xl border border-[#d9d3c8] bg-white px-3.5 py-2.5 text-sm font-mono tracking-widest outline-none focus:border-[#0d2d26] focus:ring-2 focus:ring-[#0d2d26]/10"
+                          />
+                          <button
+                            type="submit"
+                            disabled={submittingOtp || !otp.trim()}
+                            className="rounded-xl bg-[#0d2d26] px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-[#19463a] disabled:opacity-50"
+                          >
+                            {submittingOtp ? "Confirming..." : "Submit Code"}
+                          </button>
+                        </form>
+                      </div>
 
-                      <div className="mt-4 flex items-center gap-3 text-sm font-medium text-[#b84620]">
-                        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#b84620]" />
+                      {/* MTN & AirtelTigo Instructions */}
+                      <div className="rounded-xl border border-[#e5e1d8] bg-[#fcfbf8] p-3.5 text-xs text-[#5f625d] space-y-1">
+                        <div className="font-semibold text-[#0d2d26] uppercase tracking-wider text-[11px]">
+                          MTN & AirtelTigo Users
+                        </div>
+                        <p>
+                          • Enter your MoMo PIN on the prompt that appears on your phone screen.
+                        </p>
+                        <p>
+                          • If no prompt appeared: Dial <strong>*170#</strong> &gt; <strong>6 (My Wallet)</strong> &gt; <strong>3 (My Approvals)</strong> to authorize.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 text-xs font-medium text-[#b84620] pt-1">
+                        <span className="size-2 animate-pulse rounded-full bg-[#b84620]" />
                         Waiting for payment confirmation...
                       </div>
                     </div>
