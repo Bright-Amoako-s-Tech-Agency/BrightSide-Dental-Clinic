@@ -167,7 +167,12 @@ export default function Booking() {
         const result = await apiRequest(`/availability?${query}`);
 
         if (!cancelled) {
-          setSlots(Array.isArray(result?.data) ? result.data : []);
+          const rawSlots = Array.isArray(result?.data?.slots)
+            ? result.data.slots
+            : Array.isArray(result?.data)
+              ? result.data
+              : [];
+          setSlots(rawSlots);
         }
       } catch (error) {
         if (!cancelled) {

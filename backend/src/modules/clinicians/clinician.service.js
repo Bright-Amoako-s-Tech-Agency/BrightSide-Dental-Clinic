@@ -168,6 +168,19 @@ export async function createClinician(input) {
     }
   }
 
+  // Seed default Monday to Friday working hours (09:00 - 17:00)
+  const defaultAvailability = [1, 2, 3, 4, 5].map((day_of_week) => ({
+    clinician_id: data.id,
+    day_of_week,
+    start_time: "09:00:00",
+    end_time: "17:00:00",
+    active: true,
+  }));
+  await supabase
+    .from("clinician_availability")
+    .insert(defaultAvailability)
+    .catch((err) => console.error("Failed to seed default availability:", err));
+
   // Fetch updated record with relations
   const { data: fullClinician } = await supabase
     .from("clinicians")

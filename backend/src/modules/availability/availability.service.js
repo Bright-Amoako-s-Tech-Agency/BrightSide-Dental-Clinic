@@ -125,7 +125,22 @@ export async function findAvailability({ clinicianId, treatmentId, date }) {
     throw new AppError("Failed to fetch clinician availability", 500);
   }
 
-  if (!schedules.length) {
+  // If no custom shift is defined for this day, default to standard clinic hours on weekdays (Mon-Fri 09:00 - 17:00)
+  const activeSchedules =
+    schedules && schedules.length > 0
+      ? schedules
+      : dayOfWeek >= 1 && dayOfWeek <= 5
+        ? [
+            {
+              day_of_week: dayOfWeek,
+              start_time: "09:00:00",
+              end_time: "17:00:00",
+              active: true,
+            },
+          ]
+        : [];
+
+  if (!activeSchedules.length) {
     return {
       date,
       clinician,
@@ -212,7 +227,7 @@ export async function findAvailability({ clinicianId, treatmentId, date }) {
 
   const slots = [];
 
-  for (const schedule of schedules) {
+  for (const schedule of activeSchedules) {
     const scheduleStart = timeToMinutes(schedule.start_time);
     const scheduleEnd = timeToMinutes(schedule.end_time);
 
